@@ -1,0 +1,13 @@
+sktime
+catch22
+tsfresh
+pyts
+statsmodels
+scikit-image
+scikit-learn
+lightgbm
+pandas
+numpy
+keras
+tensorflow<2.0
+tensorflow-gpu<2.0
