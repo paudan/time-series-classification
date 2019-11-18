@@ -1,5 +1,5 @@
+Cython
 sktime
-catch22
 tsfresh
 pyts
 statsmodels
