@@ -1,4 +1,6 @@
 from datetime import datetime
+import copy
+import gc
 import os
 import itertools
 import pickle
@@ -60,13 +62,14 @@ def calculate_performance(func, output_file, excluded=None):
             except:
                 return float('nan'), float('nan')
 
-        return list(itertools.chain(*[evaluate_classifier(clf) for clf in classifiers]))
+        del train_x, train_y, test_x, test_y, data_train, data_test
+        gc.collect()
+        return list(itertools.chain(*[evaluate_classifier(clf) for clf in classifiers])), dst
 
     global datasets
-    #datasets = datasets[:20]
     results = [evaluate_classifiers(dst) for dst in datasets]
-    results = pd.DataFrame([x for x in results if x is not None],
-                           index=[d for d in datasets if d not in excluded], columns=index)
+    results = pd.DataFrame([x[0] for x in results if x is not None],
+                           index=[x[1] for x in results if x is not None], columns=index)
     with open(output_file, "wb") as f:
         pickle.dump(results, f)
     return results

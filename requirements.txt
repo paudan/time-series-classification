@@ -1,13 +1,13 @@
-Cython
 sktime
 tsfresh
 pyts
 statsmodels
 scikit-image
 scikit-learn
-lightgbm
+xgboost
 pandas
 numpy
+numba
 keras
 tensorflow<2.0
-tensorflow-gpu<2.0
+

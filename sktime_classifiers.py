@@ -78,11 +78,13 @@ def calculate_performance(output_file):
             pred = clf.predict(test_x)
             return accuracy_score(test_y, pred), f1_score(test_y, pred, average='macro')
 
-        return list(itertools.chain(*[evaluate_classifier(clf) for _, clf in classifiers]))
+        return list(itertools.chain(*[evaluate_classifier(clf) for _, clf in classifiers])), dst
 
     global datasets
     datasets = datasets[:2]
-    results = pd.DataFrame([evaluate_classifiers(dst) for dst in datasets], index=datasets, columns=index)
+    results = [evaluate_classifiers(dst) for dst in datasets]
+    results = pd.DataFrame([x[0] for x in results if x is not None],
+                           index=[x[1] for x in results if x is not None], columns=index)
     with open(output_file, "wb") as f:
         pickle.dump(results, f)
     return results

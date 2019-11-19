@@ -17,7 +17,7 @@ tuples = ([(clf.__class__.__name__, 'Accuracy'), (clf.__class__.__name__, 'F1-Sc
 index = pd.MultiIndex.from_tuples(itertools.chain(*tuples), names=['classifier', 'metric'])
 
 
-def calculate_performance(func, output_file):
+def calculate_performance(output_file):
 
     def evaluate_classifiers(dst):
         print("[%s] Processing dataset %s" % (datetime.now().strftime("%F %T"), dst))
