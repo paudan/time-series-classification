@@ -1,5 +1,4 @@
 from datetime import datetime
-import copy
 import gc
 import os
 import itertools
