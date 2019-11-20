@@ -113,12 +113,15 @@ def calculate_performance(output_file):
                        GramianAngularField()]
 
         def evaluate_classifier(plot_obj):
-            classifier = TimeSeriesPlotClassifier(input_dim, num_classes=len(set(train_y)),
-                                                  batch_size=batch_size, series_plot_obj=plot_obj)
-            classifier.train(data_train, labels_train, n_epochs=n_epochs)
-            y_pred = [classifier.predict(series) for series in data_test]
-            y_pred = enc.inverse_transform(y_pred)
-            return accuracy_score(test_y, y_pred), f1_score(test_y, y_pred, average='macro')
+            try:
+                classifier = TimeSeriesPlotClassifier(input_dim, num_classes=len(set(train_y)),
+                                                      batch_size=batch_size, series_plot_obj=plot_obj)
+                classifier.train(data_train, labels_train, n_epochs=n_epochs)
+                y_pred = [classifier.predict(series) for series in data_test]
+                y_pred = enc.inverse_transform(y_pred)
+                return accuracy_score(test_y, y_pred), f1_score(test_y, y_pred, average='macro')
+            except:
+                return float('nan'), float('nan')
 
         return list(itertools.chain(*[evaluate_classifier(plot_obj) for plot_obj in ts_plotters]))
 
