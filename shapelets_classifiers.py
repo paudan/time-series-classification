@@ -30,9 +30,12 @@ def calculate_performance(output_file, excluded=None):
         train_x, train_y = load_from_tsfile_to_dataframe(os.path.join(UCR_DATASET_PATH, dst, dst + "_TRAIN.ts"))
         test_x, test_y = load_from_tsfile_to_dataframe(os.path.join(UCR_DATASET_PATH, dst, dst + "_TEST.ts"))
 
-        transform = ContractedShapeletTransform(time_limit_in_mins=5)
-        train_data = transform.fit_transform(train_x, train_y)
-        test_data = transform.transform(test_x)
+        try:
+            transform = ContractedShapeletTransform(time_limit_in_mins=5)
+            train_data = transform.fit_transform(train_x, train_y)
+            test_data = transform.transform(test_x)
+        except:
+            return None
 
         def evaluate_classifier(clf):
             try:
