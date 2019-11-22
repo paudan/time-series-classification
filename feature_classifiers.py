@@ -26,6 +26,7 @@ index = pd.MultiIndex.from_tuples(itertools.chain(*tuples), names=['classifier',
 def tsfresh_features(series_data):
     series_df = pd.concat([pd.DataFrame({'id': i, 'value': series_data.iloc[i][0]}).reset_index()
                            for i in range(series_data.shape[0])], axis='rows')
+    series_df[pd.isnull(series_df)] = 0
     series_df.columns = ['time', 'id', 'value']
     f = extract_features(series_df, column_id = "id", column_sort = "time")
     impute(f)
@@ -50,8 +51,11 @@ def calculate_performance(func, output_file, excluded=None):
         test_x, test_y = load_from_tsfile_to_dataframe(os.path.join(UCR_DATASET_PATH, dst, dst + "_TEST.ts"))
         if len(set(train_y)) == 1:
             return None
-        data_train = func(train_x)
-        data_test = func(test_x)
+        try:
+            data_train = func(train_x)
+            data_test = func(test_x)
+        except:
+            return None
 
         def evaluate_classifier(clf):
             try:
