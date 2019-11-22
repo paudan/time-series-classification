@@ -5,7 +5,7 @@ statsmodels
 scikit-image
 scikit-learn
 xgboost
-pandas
+pandas<0.24
 numpy
 numba
 keras
