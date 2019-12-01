@@ -51,6 +51,7 @@ def calculate_performance(func, output_file, excluded=None):
         test_x, test_y = load_from_tsfile_to_dataframe(os.path.join(UCR_DATASET_PATH, dst, dst + "_TEST.ts"))
         if len(set(train_y)) == 1:
             return None
+        data_train = data_test = None
         try:
             data_train = func(train_x)
             data_test = func(test_x)
@@ -67,9 +68,10 @@ def calculate_performance(func, output_file, excluded=None):
                 print("Exception while evaluating classifier:", e.__str__())
                 return float('nan'), float('nan')
 
+        results = list(itertools.chain(*[evaluate_classifier(clf) for clf in classifiers]))
         del train_x, train_y, test_x, test_y, data_train, data_test
         gc.collect()
-        return list(itertools.chain(*[evaluate_classifier(clf) for clf in classifiers])), dst
+        return results, dst
 
     global datasets
     results = [evaluate_classifiers(dst) for dst in datasets]
