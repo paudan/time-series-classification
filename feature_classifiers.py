@@ -54,7 +54,8 @@ def calculate_performance(func, output_file, excluded=None):
         try:
             data_train = func(train_x)
             data_test = func(test_x)
-        except:
+        except Exception as e:
+            print("Exception while evaluating classifier:", e.__str__())
             return None
 
         def evaluate_classifier(clf):
@@ -62,7 +63,8 @@ def calculate_performance(func, output_file, excluded=None):
                 clf.fit(data_train, train_y)
                 pred = clf.predict(data_test)
                 return accuracy_score(test_y, pred), f1_score(test_y, pred, average='macro')
-            except:
+            except Exception as e:
+                print("Exception while evaluating classifier:", e.__str__())
                 return float('nan'), float('nan')
 
         del train_x, train_y, test_x, test_y, data_train, data_test
