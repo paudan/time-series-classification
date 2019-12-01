@@ -27,7 +27,6 @@ batch_size = 16
 
 UCR_DATASET_PATH = '/mnt/DATA/data/Univariate_ts'
 datasets = list(os.walk(UCR_DATASET_PATH))[0][1]
-datasets = datasets[:1]
 random_state = 0
 
 classifiers = ["RecurrencePlot", "MarkovTransitiveFields", "GramianAngular"]
@@ -180,5 +179,5 @@ def calculate_performance(output_file, classif_class):
 
 if __name__ == '__main__':
     # calculate_performance(os.path.join("results", "cnn_results.pkl"), TimeSeriesPlotClassifier)
-    # print(calculate_performance(os.path.join("results", "resnet_results.pkl"), ResNetClassifier))
-    print(calculate_performance(os.path.join("results", "inception_results.pkl"), InceptionClassifier))
+    # calculate_performance(os.path.join("results", "resnet_results.pkl"), ResNetClassifier)
+    calculate_performance(os.path.join("results", "inception_results.pkl"), InceptionClassifier)
