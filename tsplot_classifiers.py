@@ -9,17 +9,25 @@ from sktime.utils.load_data import load_from_tsfile_to_dataframe
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.metrics import *
 from pyts.image import RecurrencePlot, MarkovTransitionField, GramianAngularField
+from keras_applications.resnet50 import ResNet50
+from keras_applications.inception_v3 import InceptionV3
+import keras
+from keras.callbacks import EarlyStopping
 from keras.layers import Conv2D, InputLayer, MaxPooling2D, Dropout, BatchNormalization, Flatten, Dense
 from keras.models import Sequential
 from keras.utils import Sequence
 
+import warnings
+warnings.filterwarnings("ignore")
 
-input_dim = 128
-n_epochs = 10  # 5 at least
+
+input_dim = 256
+n_epochs = 20  # 5 at least
 batch_size = 16
 
 UCR_DATASET_PATH = '/mnt/DATA/data/Univariate_ts'
 datasets = list(os.walk(UCR_DATASET_PATH))[0][1]
+datasets = datasets[:1]
 random_state = 0
 
 classifiers = ["RecurrencePlot", "MarkovTransitiveFields", "GramianAngular"]
@@ -68,9 +76,7 @@ class TimeSeriesPlotClassifier:
 
     def init_model(self):
         self.model = Sequential()
-        input = InputLayer(input_shape=(self.input_dim, self.input_dim, 1))
-        self.model.add(input)
-        # encoder
+        self.model.add(InputLayer(input_shape=(self.input_dim, self.input_dim, 1)))
         self.model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
         self.model.add(BatchNormalization())
         self.model.add(MaxPooling2D(pool_size=(2, 2)))
@@ -80,13 +86,14 @@ class TimeSeriesPlotClassifier:
         self.model.add(MaxPooling2D(pool_size=(2, 2)))
         self.model.add(Flatten())
         self.model.add(Dense(self.num_classes))
-        self.model.compile(loss='mse', optimizer='adam')
+        self.model.compile(loss='categorical_crossentropy', optimizer='adam')
         self.model.summary()
 
     def train(self, series_data, labels, n_epochs=5):
         plot_generator = SeriesPlotGenerator(series_data, labels, img_size=self.input_dim,
                                              batch_size=self.batch_size, series_plot_obj=self.series_plot_obj)
-        return self.model.fit_generator(plot_generator, epochs=n_epochs)
+        return self.model.fit_generator(plot_generator, epochs=n_epochs,
+                                        callbacks=[EarlyStopping(patience=5)])
 
     def predict(self, data):
         img = SeriesPlotGenerator.generate_series_plot(self.series_plot_obj, data, self.input_dim)
@@ -94,7 +101,45 @@ class TimeSeriesPlotClassifier:
         return self.model.predict_classes(img)
 
 
-def calculate_performance(output_file):
+class ResNetClassifier(TimeSeriesPlotClassifier):
+
+    def init_model(self):
+        self.model = ResNet50(include_top=True, weights=None,
+                              input_shape=(self.input_dim, self.input_dim, 1),
+                              backend=keras.backend,
+                              layers=keras.layers,
+                              models=keras.models,
+                              utils=keras.utils,
+                              classes=self.num_classes)
+        self.model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
+        self.model.summary()
+
+    def predict(self, data):
+        img = SeriesPlotGenerator.generate_series_plot(self.series_plot_obj, data, self.input_dim)
+        img = np.expand_dims(img, axis=0)  # Add batch dim
+        return np.argmax(self.model.predict(img), axis=1)
+
+
+class InceptionClassifier(TimeSeriesPlotClassifier):
+
+    def init_model(self):
+        self.model = InceptionV3(include_top=True, weights=None,
+                          input_shape=(self.input_dim, self.input_dim, 1),
+                          backend=keras.backend,
+                          layers=keras.layers,
+                          models=keras.models,
+                          utils=keras.utils,
+                          classes=self.num_classes)
+        self.model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
+        self.model.summary()
+
+    def predict(self, data):
+        img = SeriesPlotGenerator.generate_series_plot(self.series_plot_obj, data, self.input_dim)
+        img = np.expand_dims(img, axis=0)  # Add batch dim
+        return np.argmax(self.model.predict(img), axis=1)
+
+
+def calculate_performance(output_file, classif_class):
 
     def evaluate_classifiers(dst):
         print("[%s] Processing dataset %s" % (datetime.now().strftime("%F %T"), dst))
@@ -114,13 +159,14 @@ def calculate_performance(output_file):
 
         def evaluate_classifier(plot_obj):
             try:
-                classifier = TimeSeriesPlotClassifier(input_dim, num_classes=len(set(train_y)),
-                                                      batch_size=batch_size, series_plot_obj=plot_obj)
+                classifier = classif_class(input_dim, num_classes=len(set(train_y)),
+                                           batch_size=batch_size, series_plot_obj=plot_obj)
                 classifier.train(data_train, labels_train, n_epochs=n_epochs)
                 y_pred = [classifier.predict(series) for series in data_test]
                 y_pred = enc.inverse_transform(y_pred)
                 return accuracy_score(test_y, y_pred), f1_score(test_y, y_pred, average='macro')
-            except:
+            except Exception as e:
+                print("Exception while evaluating classifier:", e.__str__())
                 return float('nan'), float('nan')
 
         return list(itertools.chain(*[evaluate_classifier(plot_obj) for plot_obj in ts_plotters]))
@@ -133,4 +179,6 @@ def calculate_performance(output_file):
 
 
 if __name__ == '__main__':
-    calculate_performance(os.path.join("results", "cnn_results.pkl"))
+    # calculate_performance(os.path.join("results", "cnn_results.pkl"), TimeSeriesPlotClassifier)
+    # print(calculate_performance(os.path.join("results", "resnet_results.pkl"), ResNetClassifier))
+    print(calculate_performance(os.path.join("results", "inception_results.pkl"), InceptionClassifier))
