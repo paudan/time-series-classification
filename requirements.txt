@@ -10,4 +10,5 @@ numpy
 numba
 keras
 tensorflow<2.0
+attrs==19.1.0
 
