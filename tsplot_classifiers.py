@@ -1,7 +1,9 @@
+import sys
 import os
 import itertools
 import pickle
 from datetime import datetime
+os.environ['KERAS_BACKEND'] = 'theano'
 import numpy as np
 import pandas as pd
 from skimage.transform import resize
@@ -20,10 +22,12 @@ from keras.utils import Sequence
 import warnings
 warnings.filterwarnings("ignore")
 
+sys.setrecursionlimit(10000)
+
 
 input_dim = 256
-n_epochs = 20  # 5 at least
-batch_size = 16
+n_epochs = 20
+batch_size = 8
 
 UCR_DATASET_PATH = '/mnt/DATA/data/Univariate_ts'
 datasets = list(os.walk(UCR_DATASET_PATH))[0][1]
@@ -86,7 +90,7 @@ class TimeSeriesPlotClassifier:
         self.model.add(Flatten())
         self.model.add(Dense(self.num_classes))
         self.model.compile(loss='categorical_crossentropy', optimizer='adam')
-        self.model.summary()
+        # self.model.summary()
 
     def train(self, series_data, labels, n_epochs=5):
         plot_generator = SeriesPlotGenerator(series_data, labels, img_size=self.input_dim,
@@ -111,7 +115,7 @@ class ResNetClassifier(TimeSeriesPlotClassifier):
                               utils=keras.utils,
                               classes=self.num_classes)
         self.model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
-        self.model.summary()
+        # self.model.summary()
 
     def predict(self, data):
         img = SeriesPlotGenerator.generate_series_plot(self.series_plot_obj, data, self.input_dim)
@@ -130,7 +134,7 @@ class InceptionClassifier(TimeSeriesPlotClassifier):
                           utils=keras.utils,
                           classes=self.num_classes)
         self.model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
-        self.model.summary()
+        # self.model.summary()
 
     def predict(self, data):
         img = SeriesPlotGenerator.generate_series_plot(self.series_plot_obj, data, self.input_dim)
@@ -163,7 +167,11 @@ def calculate_performance(output_file, classif_class):
                 classifier.train(data_train, labels_train, n_epochs=n_epochs)
                 y_pred = [classifier.predict(series) for series in data_test]
                 y_pred = enc.inverse_transform(y_pred)
-                return accuracy_score(test_y, y_pred), f1_score(test_y, y_pred, average='macro')
+                accuracy = accuracy_score(test_y, y_pred)
+                f1 = f1_score(test_y, y_pred, average='macro')
+                with open("tsplot_results.csv", "a") as f:
+                    f.write("{};{};{};{};{}\n".format(classif_class.__class__.__name__, plot_obj.__class__.__name__, dst, accuracy, f1))
+                return accuracy, f1
             except Exception as e:
                 print("Exception while evaluating classifier:", e.__str__())
                 return float('nan'), float('nan')
@@ -171,7 +179,14 @@ def calculate_performance(output_file, classif_class):
         return list(itertools.chain(*[evaluate_classifier(plot_obj) for plot_obj in ts_plotters]))
 
     global datasets
-    results = pd.DataFrame([evaluate_classifiers(dst) for dst in datasets], index=datasets, columns=index)
+    if os.path.isfile("tsplot_results.csv"):
+        finished = pd.read_csv("tsplot_results.csv", header=None, sep=';',
+                                names = ['classifier', 'plot_technique', 'dataset', 'accuracy', 'f1-score'])
+        finished = finished['dataset'].unique()
+    else:
+        finished = []
+    processed = sorted(set(datasets) - set(finished))
+    results = pd.DataFrame([evaluate_classifiers(dst) for dst in processed], index=processed, columns=index)
     with open(output_file, "wb") as f:
         pickle.dump(results, f)
     return results
@@ -179,5 +194,5 @@ def calculate_performance(output_file, classif_class):
 
 if __name__ == '__main__':
     # calculate_performance(os.path.join("results", "cnn_results.pkl"), TimeSeriesPlotClassifier)
-    # calculate_performance(os.path.join("results", "resnet_results.pkl"), ResNetClassifier)
-    calculate_performance(os.path.join("results", "inception_results.pkl"), InceptionClassifier)
+    calculate_performance(os.path.join("results", "resnet_results.pkl"), ResNetClassifier)
+    # calculate_performance(os.path.join("results", "inception_results.pkl"), InceptionClassifier)
